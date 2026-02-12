@@ -464,7 +464,8 @@ export default function App() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const img = new ImageData(frameRgba, CANVAS_SIZE, CANVAS_SIZE);
+    const img = ctx.createImageData(CANVAS_SIZE, CANVAS_SIZE);
+    img.data.set(frameRgba);
     ctx.putImageData(img, 0, 0);
 
     drawBoxes.forEach((b) => {
@@ -479,7 +480,8 @@ export default function App() {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    const img = new ImageData(kernelRgba, KERNEL_VIEW_SIZE, KERNEL_VIEW_SIZE);
+    const img = ctx.createImageData(KERNEL_VIEW_SIZE, KERNEL_VIEW_SIZE);
+    img.data.set(kernelRgba);
     ctx.putImageData(img, 0, 0);
   }, [kernelRgba]);
 
