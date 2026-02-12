@@ -17,6 +17,7 @@ Web rewrite scaffold for the Synthetic Hubel-Wiesel GUI.
 - On push to `main`, it builds this app and deploys to GitHub Pages.
 - Vite base path defaults to `/synthetic-huber-wiesel/`.
 - Public URL: `https://antonio-lozano.github.io/synthetic-huber-wiesel/`
+- If you get `404`, confirm `Settings -> Pages -> Source = GitHub Actions`.
 
 ## Current scope
 - Single-neuron interactive mode with neuron ID selection.
