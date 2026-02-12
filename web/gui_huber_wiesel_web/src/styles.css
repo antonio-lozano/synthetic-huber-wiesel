@@ -169,11 +169,11 @@ canvas {
 
 .panel-kernel,
 .panel-wave {
-  min-height: 250px;
+  min-height: 290px;
 }
 
 .panel-wave .plot {
-  height: 235px;
+  height: 285px;
 }
 
 @media (max-width: 1600px) {

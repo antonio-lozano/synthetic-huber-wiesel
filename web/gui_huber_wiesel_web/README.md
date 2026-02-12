@@ -16,9 +16,10 @@ Web rewrite scaffold for the Synthetic Hubel-Wiesel GUI.
 - The repository includes a workflow at `.github/workflows/deploy-web.yml`.
 - On push to `main`, it builds this app and deploys to GitHub Pages.
 - Vite base path defaults to `/synthetic-huber-wiesel/`.
+- Public URL: `https://antonio-lozano.github.io/synthetic-huber-wiesel/`
 
 ## Current scope
-- Multi-neuron RF overlays (up to 5) with per-slot RF position editing.
+- Single-neuron interactive mode with neuron ID selection.
 - Synthetic V1 kernel generation with RF scaling, optional grayscale, and gray-outside masking.
 - Stimulus modes: bar, grating, and CIFAR-like natural patch stream for browser-only runtime.
 - Timed ON/OFF presentation mode with per-cycle auto-parameter changes.

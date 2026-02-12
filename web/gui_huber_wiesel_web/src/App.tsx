@@ -44,6 +44,13 @@ type DrawBox = {
   colorHex: string;
 };
 
+type PlotMargins = {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+};
+
 function clamp(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v));
 }
@@ -60,15 +67,24 @@ function buildHistory(n: number): Hist {
   };
 }
 
-function polylinePoints(xs: number[], ys: number[], width: number, height: number, yMax: number): string {
+function polylinePoints(
+  xs: number[],
+  ys: number[],
+  width: number,
+  height: number,
+  yMax: number,
+  margins: PlotMargins = { left: 0, right: 0, top: 0, bottom: 0 },
+): string {
   if (xs.length === 0 || ys.length === 0) return "";
   const t0 = xs[0];
   const t1 = xs[xs.length - 1];
   const dt = Math.max(1e-6, t1 - t0);
+  const innerW = Math.max(1, width - margins.left - margins.right);
+  const innerH = Math.max(1, height - margins.top - margins.bottom);
   return xs
     .map((t, i) => {
-      const x = ((t - t0) / dt) * width;
-      const y = height - (clamp(ys[i], 0, yMax) / Math.max(1e-6, yMax)) * height;
+      const x = margins.left + ((t - t0) / dt) * innerW;
+      const y = margins.top + (1 - clamp(ys[i], 0, yMax) / Math.max(1e-6, yMax)) * innerH;
       return `${x.toFixed(2)},${y.toFixed(2)}`;
     })
     .join(" ");
@@ -125,7 +141,7 @@ export default function App() {
   const [neurons, setNeurons] = useState<SimNeuron[]>(() => createNeurons(MAX_NEURONS, CANVAS_SIZE, 2026));
   const [activeNeuronIndex, setActiveNeuronIndex] = useState(0);
   const [rfScalePct, setRfScalePct] = useState(100);
-  const [maskRf, setMaskRf] = useState(false);
+  const [maskRf, setMaskRf] = useState(true);
   const [grayRf, setGrayRf] = useState(false);
   const [grayEnergy, setGrayEnergy] = useState(true);
 
@@ -148,7 +164,7 @@ export default function App() {
   const [cifarSizePx, setCifarSizePx] = useState(140);
 
   const [timedExperiment, setTimedExperiment] = useState(false);
-  const [onMs, setOnMs] = useState(100);
+  const [onMs, setOnMs] = useState(500);
   const [offMs, setOffMs] = useState(500);
   const [autoBarStepDeg, setAutoBarStepDeg] = useState(20);
   const [autoGrMode, setAutoGrMode] = useState<GratingAutoMode>("orientation");
@@ -187,6 +203,11 @@ export default function App() {
     return Math.max(1, ...hist.rates[0]);
   }, [hist.rates]);
   const ratePlotYMax = Math.max(1, Math.min(rateYMax, Math.max(5, observedRateMax * 1.25)));
+  const rateSvgW = 1000;
+  const rateSvgH = 220;
+  const rateMargins: PlotMargins = { left: 70, right: 14, top: 12, bottom: 34 };
+  const rateInnerW = rateSvgW - rateMargins.left - rateMargins.right;
+  const rateInnerH = rateSvgH - rateMargins.top - rateMargins.bottom;
 
   function stopAudio(): void {
     try {
@@ -872,7 +893,7 @@ export default function App() {
             <h2>Detected Spike Shape Buffer</h2>
             <svg viewBox="0 0 1000 240" className="plot">
               <rect x={0} y={0} width={1000} height={240} fill="#000" />
-              <line x1={0} y1={120} x2={1000} y2={120} stroke="#6f6f6f" strokeWidth={1} opacity={0.9} />
+              <line x1={0} y1={120} x2={1000} y2={120} stroke="#ffffff" strokeWidth={1.2} opacity={0.95} />
               {activeNeurons.map((n, i) =>
                 hist.waves[i].map((w, j) => (
                   <polyline
@@ -891,12 +912,70 @@ export default function App() {
 
         <section className="panel">
           <h2>Firing Rate (0..{ratePlotYMax.toFixed(1)} Hz)</h2>
-          <svg viewBox="0 0 1000 220" className="plot">
-            <rect x={0} y={0} width={1000} height={220} fill="#000" />
+          <svg viewBox={`0 0 ${rateSvgW} ${rateSvgH}`} className="plot">
+            <rect x={0} y={0} width={rateSvgW} height={rateSvgH} fill="#000" />
+            <line
+              x1={rateMargins.left}
+              y1={rateMargins.top + rateInnerH}
+              x2={rateMargins.left + rateInnerW}
+              y2={rateMargins.top + rateInnerH}
+              stroke="#ffffff"
+              strokeWidth={1.5}
+            />
+            <line
+              x1={rateMargins.left}
+              y1={rateMargins.top}
+              x2={rateMargins.left}
+              y2={rateMargins.top + rateInnerH}
+              stroke="#ffffff"
+              strokeWidth={1.5}
+            />
+            {[0, 3, 6, 9, 12].map((tv) => {
+              const x = rateMargins.left + (tv / HISTORY_SEC) * rateInnerW;
+              return (
+                <g key={`tx-${tv}`}>
+                  <line x1={x} y1={rateMargins.top + rateInnerH} x2={x} y2={rateMargins.top + rateInnerH + 6} stroke="#ffffff" strokeWidth={1} />
+                  <text x={x} y={rateSvgH - 8} fill="#ffffff" fontSize={14} textAnchor="middle">
+                    {tv.toString()}
+                  </text>
+                </g>
+              );
+            })}
+            {[0, 0.25, 0.5, 0.75, 1].map((frac) => {
+              const val = ratePlotYMax * frac;
+              const y = rateMargins.top + (1 - frac) * rateInnerH;
+              return (
+                <g key={`ty-${frac.toFixed(2)}`}>
+                  <line x1={rateMargins.left - 6} y1={y} x2={rateMargins.left} y2={y} stroke="#ffffff" strokeWidth={1} />
+                  <text x={rateMargins.left - 10} y={y + 4} fill="#ffffff" fontSize={13} textAnchor="end">
+                    {val.toFixed(0)}
+                  </text>
+                </g>
+              );
+            })}
+            <text
+              x={rateMargins.left + rateInnerW / 2}
+              y={rateSvgH - 2}
+              fill="#ffffff"
+              fontSize={14}
+              textAnchor="middle"
+            >
+              Time (s)
+            </text>
+            <text
+              x={18}
+              y={rateMargins.top + rateInnerH / 2}
+              fill="#ffffff"
+              fontSize={14}
+              textAnchor="middle"
+              transform={`rotate(-90 18 ${rateMargins.top + rateInnerH / 2})`}
+            >
+              Rate (Hz)
+            </text>
             {activeNeurons.map((n, i) => (
               <polyline
                 key={n.id}
-                points={polylinePoints(hist.t, hist.rates[i], 1000, 220, ratePlotYMax)}
+                points={polylinePoints(hist.t, hist.rates[i], rateSvgW, rateSvgH, ratePlotYMax, rateMargins)}
                 fill="none"
                 stroke={NEURON_COLOR_HEX[n.color]}
                 strokeWidth={2}
@@ -907,10 +986,10 @@ export default function App() {
 
         <section className="panel">
           <h2>Spikes Over Time</h2>
-          <svg viewBox="0 0 1000 170" className="plot">
-            <rect x={0} y={0} width={1000} height={170} fill="#000" />
+          <svg viewBox="0 0 1000 220" className="plot">
+            <rect x={0} y={0} width={1000} height={220} fill="#000" />
             {activeNeurons.map((n, i) =>
-              spikeLines(hist.spikes[i], tNow, 1000, 170).map((ln, j) => (
+              spikeLines(hist.spikes[i], tNow, 1000, 220).map((ln, j) => (
                 <line
                   key={`${n.id}-${j}`}
                   x1={ln.x}
