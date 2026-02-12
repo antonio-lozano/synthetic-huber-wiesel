@@ -1,0 +1,111 @@
+:root {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: #f2f2f2;
+  background: #050505;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.app {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 14px;
+  width: 100%;
+  min-height: 100%;
+  padding: 14px;
+  background: radial-gradient(1200px 800px at 80% 10%, #202020, #050505);
+}
+
+.left {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.right {
+  display: grid;
+  grid-template-rows: auto auto auto;
+  gap: 12px;
+}
+
+h1,
+h2 {
+  margin: 0;
+  font-weight: 650;
+}
+
+h1 {
+  font-size: 22px;
+}
+
+h2 {
+  font-size: 16px;
+}
+
+.muted {
+  margin: 2px 0 0;
+  color: #b8b8b8;
+  font-size: 13px;
+}
+
+.card,
+.panel {
+  background: #0f0f0f;
+  border: 1px solid #2a2a2a;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+
+input[type="range"],
+select {
+  width: 100%;
+}
+
+.legend {
+  display: flex;
+  gap: 10px;
+  font-weight: 700;
+}
+
+canvas {
+  width: min(100%, 560px);
+  height: auto;
+  border: 1px solid #3a3a3a;
+  background: #000;
+}
+
+.plot {
+  width: 100%;
+  height: 190px;
+  border: 1px solid #303030;
+  border-radius: 6px;
+}
+
+@media (max-width: 1080px) {
+  .app {
+    grid-template-columns: 1fr;
+  }
+}
