@@ -935,7 +935,7 @@ export default function App() {
               return (
                 <g key={`tx-${tv}`}>
                   <line x1={x} y1={rateMargins.top + rateInnerH} x2={x} y2={rateMargins.top + rateInnerH + 6} stroke="#ffffff" strokeWidth={1} />
-                  <text x={x} y={rateSvgH - 8} fill="#ffffff" fontSize={14} textAnchor="middle">
+                  <text className="axis-tick" x={x} y={rateSvgH - 8} fill="#ffffff" textAnchor="middle">
                     {tv.toString()}
                   </text>
                 </g>
@@ -947,26 +947,26 @@ export default function App() {
               return (
                 <g key={`ty-${frac.toFixed(2)}`}>
                   <line x1={rateMargins.left - 6} y1={y} x2={rateMargins.left} y2={y} stroke="#ffffff" strokeWidth={1} />
-                  <text x={rateMargins.left - 10} y={y + 4} fill="#ffffff" fontSize={13} textAnchor="end">
+                  <text className="axis-tick" x={rateMargins.left - 10} y={y + 4} fill="#ffffff" textAnchor="end">
                     {val.toFixed(0)}
                   </text>
                 </g>
               );
             })}
             <text
+              className="axis-label"
               x={rateMargins.left + rateInnerW / 2}
               y={rateSvgH - 2}
               fill="#ffffff"
-              fontSize={14}
               textAnchor="middle"
             >
               Time (s)
             </text>
             <text
+              className="axis-label"
               x={18}
               y={rateMargins.top + rateInnerH / 2}
               fill="#ffffff"
-              fontSize={14}
               textAnchor="middle"
               transform={`rotate(-90 18 ${rateMargins.top + rateInnerH / 2})`}
             >
