@@ -76,7 +76,7 @@ body,
 
 .top-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.85fr) minmax(0, 0.82fr) minmax(0, 1.05fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-template-areas: "stim kernel wave";
   gap: var(--space-1);
   align-items: start;
@@ -253,8 +253,8 @@ input[type="checkbox"]:hover {
 }
 
 canvas {
-  width: min(100%, 500px);
-  height: auto;
+  width: 100%;
+  height: 100%;
   border: 1px solid var(--border-1);
   border-radius: 8px;
   background: #000;
@@ -266,7 +266,7 @@ canvas:hover {
 }
 
 .kernel-canvas {
-  width: min(100%, 220px);
+  width: 100%;
 }
 
 .plot {
@@ -284,11 +284,23 @@ canvas:hover {
 
 .panel-kernel,
 .panel-wave {
-  min-height: 290px;
+  min-height: 0;
 }
 
-.panel-wave .plot {
-  height: 285px;
+.panel-body {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  margin-top: var(--space-1);
+}
+
+.media-canvas,
+.top-plot {
+  width: 100%;
+  height: 100%;
+}
+
+.panel-wave .plot.top-plot {
+  height: 100%;
 }
 
 text.axis-label {
@@ -303,7 +315,7 @@ text.axis-tick {
 
 @media (max-width: 1600px) {
   .top-row {
-    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     grid-template-areas:
       "stim kernel"
       "wave wave";

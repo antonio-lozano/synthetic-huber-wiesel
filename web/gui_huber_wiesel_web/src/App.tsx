@@ -18,9 +18,9 @@ import {
 import { GratingAutoMode, ResponseMode, SimNeuron, StimulusColor, StimulusKind } from "./core/types";
 
 const CANVAS_SIZE = 512;
-const KERNEL_VIEW_SIZE = 240;
+const KERNEL_VIEW_SIZE = 512;
 const HISTORY_SEC = 12;
-const MAX_NEURONS = 5;
+const MAX_NEURONS = 10;
 
 type WaveBuffer = {
   tMs: number[];
@@ -74,10 +74,12 @@ function polylinePoints(
   height: number,
   yMax: number,
   margins: PlotMargins = { left: 0, right: 0, top: 0, bottom: 0 },
+  xStart?: number,
+  xEnd?: number,
 ): string {
   if (xs.length === 0 || ys.length === 0) return "";
-  const t0 = xs[0];
-  const t1 = xs[xs.length - 1];
+  const t0 = xStart ?? xs[0];
+  const t1 = xEnd ?? xs[xs.length - 1];
   const dt = Math.max(1e-6, t1 - t0);
   const innerW = Math.max(1, width - margins.left - margins.right);
   const innerH = Math.max(1, height - margins.top - margins.bottom);
@@ -92,17 +94,20 @@ function polylinePoints(
 
 function spikeLines(
   spikeTimes: number[],
-  tNow: number,
+  tStart: number,
+  tEnd: number,
   width: number,
-  height: number,
+  _height: number,
+  margins: PlotMargins = { left: 0, right: 0, top: 0, bottom: 0 },
 ): Array<{ x: number; y0: number; y1: number }> {
-  const tMin = tNow - HISTORY_SEC;
+  const innerW = Math.max(1, width - margins.left - margins.right);
+  const dt = Math.max(1e-6, tEnd - tStart);
   return spikeTimes
-    .filter((t) => t >= tMin)
+    .filter((t) => t >= tStart && t <= tEnd)
     .map((t) => ({
-      x: ((t - tMin) / Math.max(1e-6, HISTORY_SEC)) * width,
-      y0: 0,
-      y1: height,
+      x: margins.left + ((t - tStart) / dt) * innerW,
+      y0: margins.top,
+      y1: _height - margins.bottom,
     }));
 }
 
@@ -178,7 +183,7 @@ export default function App() {
   const [rateYMax, setRateYMax] = useState(120);
   const [fps, setFps] = useState(30);
   const [spikeBuffer, setSpikeBuffer] = useState(10);
-  const [spikeShapeYAbs, setSpikeShapeYAbs] = useState(1.6);
+  const [spikeShapeYAbs, setSpikeShapeYAbs] = useState(0.9);
   const [audioEnabled, setAudioEnabled] = useState(false);
   const [paused, setPaused] = useState(false);
 
@@ -208,6 +213,8 @@ export default function App() {
   const rateMargins: PlotMargins = { left: 70, right: 14, top: 12, bottom: 34 };
   const rateInnerW = rateSvgW - rateMargins.left - rateMargins.right;
   const rateInnerH = rateSvgH - rateMargins.top - rateMargins.bottom;
+  const traceTStart = hist.t.length > 0 ? hist.t[0] : Math.max(0, tNow - HISTORY_SEC);
+  const traceTEnd = hist.t.length > 1 ? hist.t[hist.t.length - 1] : traceTStart + 1.0 / Math.max(1, fps);
 
   function stopAudio(): void {
     try {
@@ -871,42 +878,54 @@ export default function App() {
         <section className="top-row">
           <section className="panel panel-stimulus">
             <h2>Stimulus + RF</h2>
-            <canvas
-              ref={canvasRef}
-              width={CANVAS_SIZE}
-              height={CANVAS_SIZE}
-              onMouseMove={(e) => {
-                if (e.buttons !== 1) return;
-                const rect = e.currentTarget.getBoundingClientRect();
-                setCenterX(clamp(e.clientX - rect.left, 0, CANVAS_SIZE));
-                setCenterY(clamp(e.clientY - rect.top, 0, CANVAS_SIZE));
-              }}
-            />
+            <div className="panel-body">
+              <canvas
+                ref={canvasRef}
+                width={CANVAS_SIZE}
+                height={CANVAS_SIZE}
+                className="media-canvas"
+                onMouseMove={(e) => {
+                  if (e.buttons !== 1) return;
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setCenterX(clamp(e.clientX - rect.left, 0, CANVAS_SIZE));
+                  setCenterY(clamp(e.clientY - rect.top, 0, CANVAS_SIZE));
+                }}
+              />
+            </div>
           </section>
 
           <section className="panel panel-kernel">
             <h2>Selected V1 Kernel</h2>
-            <canvas ref={kernelCanvasRef} width={KERNEL_VIEW_SIZE} height={KERNEL_VIEW_SIZE} className="kernel-canvas" />
+            <div className="panel-body">
+              <canvas
+                ref={kernelCanvasRef}
+                width={KERNEL_VIEW_SIZE}
+                height={KERNEL_VIEW_SIZE}
+                className="media-canvas kernel-canvas"
+              />
+            </div>
           </section>
 
           <section className="panel panel-wave">
             <h2>Detected Spike Shape Buffer</h2>
-            <svg viewBox="0 0 1000 240" className="plot">
-              <rect x={0} y={0} width={1000} height={240} fill="#000" />
-              <line x1={0} y1={120} x2={1000} y2={120} stroke="#ffffff" strokeWidth={1.2} opacity={0.95} />
-              {activeNeurons.map((n, i) =>
-                hist.waves[i].map((w, j) => (
-                  <polyline
-                    key={`${n.id}-w-${j}`}
-                    points={waveformPolyline(w.tMs, w.amp, 1000, 240, -0.5, 2.0, spikeShapeYAbs)}
-                    fill="none"
-                    stroke={NEURON_COLOR_HEX[n.color]}
-                    strokeWidth={1.2}
-                    opacity={0.8}
-                  />
-                )),
-              )}
-            </svg>
+            <div className="panel-body">
+              <svg viewBox="0 0 1000 1000" className="plot top-plot">
+                <rect x={0} y={0} width={1000} height={1000} fill="#000" />
+                <line x1={0} y1={500} x2={1000} y2={500} stroke="#ffffff" strokeWidth={1.2} opacity={0.95} />
+                {activeNeurons.map((n, i) =>
+                  hist.waves[i].map((w, j) => (
+                    <polyline
+                      key={`${n.id}-w-${j}`}
+                      points={waveformPolyline(w.tMs, w.amp, 1000, 1000, -0.5, 2.0, spikeShapeYAbs)}
+                      fill="none"
+                      stroke={NEURON_COLOR_HEX[n.color]}
+                      strokeWidth={1.4}
+                      opacity={0.9}
+                    />
+                  )),
+                )}
+              </svg>
+            </div>
           </section>
         </section>
 
@@ -975,7 +994,16 @@ export default function App() {
             {activeNeurons.map((n, i) => (
               <polyline
                 key={n.id}
-                points={polylinePoints(hist.t, hist.rates[i], rateSvgW, rateSvgH, ratePlotYMax, rateMargins)}
+                points={polylinePoints(
+                  hist.t,
+                  hist.rates[i],
+                  rateSvgW,
+                  rateSvgH,
+                  ratePlotYMax,
+                  rateMargins,
+                  traceTStart,
+                  traceTEnd,
+                )}
                 fill="none"
                 stroke={NEURON_COLOR_HEX[n.color]}
                 strokeWidth={2}
@@ -988,8 +1016,65 @@ export default function App() {
           <h2>Spikes Over Time</h2>
           <svg viewBox="0 0 1000 220" className="plot">
             <rect x={0} y={0} width={1000} height={220} fill="#000" />
+            <line
+              x1={rateMargins.left}
+              y1={rateMargins.top + rateInnerH}
+              x2={rateMargins.left + rateInnerW}
+              y2={rateMargins.top + rateInnerH}
+              stroke="#ffffff"
+              strokeWidth={1.5}
+            />
+            <line
+              x1={rateMargins.left}
+              y1={rateMargins.top}
+              x2={rateMargins.left}
+              y2={rateMargins.top + rateInnerH}
+              stroke="#ffffff"
+              strokeWidth={1.5}
+            />
+            {[0, 3, 6, 9, 12].map((tv) => {
+              const x = rateMargins.left + (tv / HISTORY_SEC) * rateInnerW;
+              return (
+                <g key={`sx-${tv}`}>
+                  <line x1={x} y1={rateMargins.top + rateInnerH} x2={x} y2={rateMargins.top + rateInnerH + 6} stroke="#ffffff" strokeWidth={1} />
+                  <text className="axis-tick" x={x} y={rateSvgH - 8} fill="#ffffff" textAnchor="middle">
+                    {tv.toString()}
+                  </text>
+                </g>
+              );
+            })}
+            {[0, 1].map((sv) => {
+              const y = rateMargins.top + (1 - sv) * rateInnerH;
+              return (
+                <g key={`sy-${sv}`}>
+                  <line x1={rateMargins.left - 6} y1={y} x2={rateMargins.left} y2={y} stroke="#ffffff" strokeWidth={1} />
+                  <text className="axis-tick" x={rateMargins.left - 10} y={y + 4} fill="#ffffff" textAnchor="end">
+                    {sv.toString()}
+                  </text>
+                </g>
+              );
+            })}
+            <text
+              className="axis-label"
+              x={rateMargins.left + rateInnerW / 2}
+              y={rateSvgH - 2}
+              fill="#ffffff"
+              textAnchor="middle"
+            >
+              Time (s)
+            </text>
+            <text
+              className="axis-label"
+              x={18}
+              y={rateMargins.top + rateInnerH / 2}
+              fill="#ffffff"
+              textAnchor="middle"
+              transform={`rotate(-90 18 ${rateMargins.top + rateInnerH / 2})`}
+            >
+              Spikes
+            </text>
             {activeNeurons.map((n, i) =>
-              spikeLines(hist.spikes[i], tNow, 1000, 220).map((ln, j) => (
+              spikeLines(hist.spikes[i], traceTStart, traceTEnd, 1000, 220, rateMargins).map((ln, j) => (
                 <line
                   key={`${n.id}-${j}`}
                   x1={ln.x}
