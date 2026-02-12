@@ -2,6 +2,7 @@
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   color: #f2f2f2;
   background: #050505;
+  font-size: 16px;
 }
 
 * {
@@ -18,27 +19,50 @@ body,
 
 .app {
   display: grid;
-  grid-template-columns: 340px 1fr;
-  gap: 14px;
+  grid-template-columns: minmax(380px, 430px) 1fr;
+  gap: 16px;
   width: 100%;
-  min-height: 100%;
-  padding: 14px;
+  height: 100vh;
+  padding: 16px;
   background: radial-gradient(1200px 800px at 80% 10%, #202020, #050505);
+  overflow: hidden;
 }
 
 .left {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  max-height: calc(100vh - 28px);
+  gap: 14px;
+  max-height: calc(100vh - 32px);
   overflow-y: auto;
-  padding-right: 4px;
+  padding-right: 8px;
 }
 
 .right {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.top-row {
   display: grid;
-  grid-template-rows: auto auto auto auto auto;
-  gap: 12px;
+  grid-template-columns: minmax(0, 2.2fr) minmax(0, 0.95fr) minmax(0, 1.25fr);
+  grid-template-areas: "stim kernel wave";
+  gap: 14px;
+  align-items: start;
+}
+
+.panel-stimulus {
+  grid-area: stim;
+}
+
+.panel-kernel {
+  grid-area: kernel;
+}
+
+.panel-wave {
+  grid-area: wave;
 }
 
 h1,
@@ -48,17 +72,17 @@ h2 {
 }
 
 h1 {
-  font-size: 22px;
+  font-size: 32px;
 }
 
 h2 {
-  font-size: 16px;
+  font-size: 22px;
 }
 
 .muted {
   margin: 2px 0 0;
   color: #b8b8b8;
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .card,
@@ -66,20 +90,21 @@ h2 {
   background: #0f0f0f;
   border: 1px solid #2a2a2a;
   border-radius: 10px;
-  padding: 10px;
+  padding: 12px;
 }
 
 .card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 label {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 12px;
+  gap: 6px;
+  font-size: 14px;
+  line-height: 1.25;
 }
 
 .row-check {
@@ -98,48 +123,84 @@ label {
   border: 1px solid #ffffff;
   background: #050505;
   color: #ffffff;
-  padding: 6px 10px;
+  padding: 8px 12px;
   cursor: pointer;
+  font-size: 14px;
 }
 
 .readout {
   border: 1px solid #303030;
-  padding: 6px 8px;
-  font-size: 12px;
+  padding: 8px 10px;
+  font-size: 14px;
   font-family: Consolas, "Courier New", monospace;
 }
 
 input[type="range"],
 select {
   width: 100%;
+  min-height: 34px;
+  font-size: 14px;
 }
 
 .legend {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   font-weight: 700;
+  font-size: 14px;
 }
 
 canvas {
-  width: min(100%, 560px);
+  width: min(100%, 640px);
   height: auto;
   border: 1px solid #3a3a3a;
   background: #000;
 }
 
 .kernel-canvas {
-  width: min(100%, 260px);
+  width: min(100%, 320px);
 }
 
 .plot {
   width: 100%;
-  height: 190px;
+  height: 230px;
   border: 1px solid #303030;
   border-radius: 6px;
 }
 
+.panel-kernel,
+.panel-wave {
+  min-height: 320px;
+}
+
+.panel-wave .plot {
+  height: 300px;
+}
+
+@media (max-width: 1600px) {
+  .top-row {
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+    grid-template-areas:
+      "stim kernel"
+      "wave wave";
+  }
+}
+
 @media (max-width: 1080px) {
   .app {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .left,
+  .right {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .top-row {
     grid-template-columns: 1fr;
   }
 }

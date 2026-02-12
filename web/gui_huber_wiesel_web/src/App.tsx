@@ -95,8 +95,8 @@ function waveformPolyline(
   y: number[],
   width: number,
   height: number,
-  xMinMs = 0,
-  xMaxMs = 1.5,
+  xMinMs = -0.5,
+  xMaxMs = 2.0,
   yAbs = 1.6,
 ): string {
   if (xMs.length === 0 || y.length === 0) return "";
@@ -160,6 +160,7 @@ export default function App() {
   const [rateYMax, setRateYMax] = useState(120);
   const [fps, setFps] = useState(30);
   const [spikeBuffer, setSpikeBuffer] = useState(10);
+  const [spikeShapeYAbs, setSpikeShapeYAbs] = useState(1.6);
   const [paused, setPaused] = useState(false);
 
   const [tNow, setTNow] = useState(0);
@@ -723,7 +724,7 @@ export default function App() {
           </label>
           <label>
             Rate Y max: {rateYMax}
-            <input type="range" min={20} max={1000} value={rateYMax} onChange={(e) => setRateYMax(Number(e.target.value))} />
+            <input type="range" min={1} max={1000} value={rateYMax} onChange={(e) => setRateYMax(Number(e.target.value))} />
           </label>
           <label>
             Gain: {rateGain.toFixed(1)}
@@ -740,6 +741,17 @@ export default function App() {
           <label>
             Spike buffer: {spikeBuffer}
             <input type="range" min={1} max={120} value={spikeBuffer} onChange={(e) => setSpikeBuffer(Number(e.target.value))} />
+          </label>
+          <label>
+            Spike shape Y +/-: {spikeShapeYAbs.toFixed(1)}
+            <input
+              type="range"
+              min={0.2}
+              max={5.0}
+              step={0.1}
+              value={spikeShapeYAbs}
+              onChange={(e) => setSpikeShapeYAbs(Number(e.target.value))}
+            />
           </label>
           <div className="row-actions">
             <button type="button" onClick={() => setPaused((p) => !p)}>
@@ -770,24 +782,45 @@ export default function App() {
       </aside>
 
       <main className="right">
-        <section className="panel">
-          <h2>Stimulus + RF</h2>
-          <canvas
-            ref={canvasRef}
-            width={CANVAS_SIZE}
-            height={CANVAS_SIZE}
-            onMouseMove={(e) => {
-              if (e.buttons !== 1) return;
-              const rect = e.currentTarget.getBoundingClientRect();
-              setCenterX(clamp(e.clientX - rect.left, 0, CANVAS_SIZE));
-              setCenterY(clamp(e.clientY - rect.top, 0, CANVAS_SIZE));
-            }}
-          />
-        </section>
+        <section className="top-row">
+          <section className="panel panel-stimulus">
+            <h2>Stimulus + RF</h2>
+            <canvas
+              ref={canvasRef}
+              width={CANVAS_SIZE}
+              height={CANVAS_SIZE}
+              onMouseMove={(e) => {
+                if (e.buttons !== 1) return;
+                const rect = e.currentTarget.getBoundingClientRect();
+                setCenterX(clamp(e.clientX - rect.left, 0, CANVAS_SIZE));
+                setCenterY(clamp(e.clientY - rect.top, 0, CANVAS_SIZE));
+              }}
+            />
+          </section>
 
-        <section className="panel">
-          <h2>Selected V1 Kernel</h2>
-          <canvas ref={kernelCanvasRef} width={KERNEL_VIEW_SIZE} height={KERNEL_VIEW_SIZE} className="kernel-canvas" />
+          <section className="panel panel-kernel">
+            <h2>Selected V1 Kernel</h2>
+            <canvas ref={kernelCanvasRef} width={KERNEL_VIEW_SIZE} height={KERNEL_VIEW_SIZE} className="kernel-canvas" />
+          </section>
+
+          <section className="panel panel-wave">
+            <h2>Detected Spike Shape Buffer</h2>
+            <svg viewBox="0 0 1000 240" className="plot">
+              <rect x={0} y={0} width={1000} height={240} fill="#000" />
+              {activeNeurons.map((n, i) =>
+                hist.waves[i].map((w, j) => (
+                  <polyline
+                    key={`${n.id}-w-${j}`}
+                    points={waveformPolyline(w.tMs, w.amp, 1000, 240, -0.5, 2.0, spikeShapeYAbs)}
+                    fill="none"
+                    stroke={NEURON_COLOR_HEX[n.color]}
+                    strokeWidth={1.2}
+                    opacity={0.8}
+                  />
+                )),
+              )}
+            </svg>
+          </section>
         </section>
 
         <section className="panel">
@@ -820,25 +853,6 @@ export default function App() {
                   y2={ln.y1}
                   stroke={NEURON_COLOR_HEX[n.color]}
                   strokeWidth={1.5}
-                />
-              )),
-            )}
-          </svg>
-        </section>
-
-        <section className="panel">
-          <h2>Detected Spike Shape Buffer</h2>
-          <svg viewBox="0 0 1000 200" className="plot">
-            <rect x={0} y={0} width={1000} height={200} fill="#000" />
-            {activeNeurons.map((n, i) =>
-              hist.waves[i].map((w, j) => (
-                <polyline
-                  key={`${n.id}-w-${j}`}
-                  points={waveformPolyline(w.tMs, w.amp, 1000, 200, -0.2, 1.8, 1.6)}
-                  fill="none"
-                  stroke={NEURON_COLOR_HEX[n.color]}
-                  strokeWidth={1.2}
-                  opacity={0.8}
                 />
               )),
             )}
