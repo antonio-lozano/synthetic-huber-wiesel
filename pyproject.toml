@@ -1,0 +1,47 @@
+[project]
+name = "neuroai-for-biomed-eng-2026"
+version = "0.1.0"
+description = "Class materials and scripts for NeuroAI for Biomedical Engineering (2026)"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+  "numpy>=1.26,<3",
+  "matplotlib>=3.8,<4",
+  "scikit-image>=0.23,<1",
+  "ipykernel>=6.29,<7",
+  "pygame>=2.6,<3",
+  "keras>=3.0,<4",
+  "torch==2.7.1; platform_system == 'Windows'",
+  "pyside6>=6.8,<7",
+  "pyqtgraph>=0.13,<0.14",
+]
+
+[project.optional-dependencies]
+mlp = [
+  "tensorflow-cpu>=2.16,<2.20",
+  "tensorflow-io-gcs-filesystem==0.31.0; platform_system == 'Windows'",
+]
+gpu-windows = [
+  "keras>=3.0,<4",
+  "torch==2.7.1",
+]
+gui = [
+  "pyside6>=6.8,<7",
+  "pyqtgraph>=0.13,<0.14",
+]
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cu128", marker = "platform_system == 'Windows'" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
