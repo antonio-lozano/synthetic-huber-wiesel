@@ -30,11 +30,14 @@ body,
   display: flex;
   flex-direction: column;
   gap: 12px;
+  max-height: calc(100vh - 28px);
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .right {
   display: grid;
-  grid-template-rows: auto auto auto;
+  grid-template-rows: auto auto auto auto auto;
   gap: 12px;
 }
 
@@ -79,6 +82,33 @@ label {
   font-size: 12px;
 }
 
+.row-check {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.row-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.row-actions button {
+  border: 1px solid #ffffff;
+  background: #050505;
+  color: #ffffff;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.readout {
+  border: 1px solid #303030;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-family: Consolas, "Courier New", monospace;
+}
+
 input[type="range"],
 select {
   width: 100%;
@@ -95,6 +125,10 @@ canvas {
   height: auto;
   border: 1px solid #3a3a3a;
   background: #000;
+}
+
+.kernel-canvas {
+  width: min(100%, 260px);
 }
 
 .plot {
