@@ -116,12 +116,14 @@ export default function App() {
   const rngRef = useRef(makeRng(2026));
   const timeRef = useRef(0);
   const autoRef = useRef({ lastCycleIndex: -1, cifarIndex: 0 });
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const humOscRef = useRef<OscillatorNode | null>(null);
+  const humGainRef = useRef<GainNode | null>(null);
 
   const cifarDataset = useMemo(() => generatePseudoCifarDataset(300), []);
 
   const [neurons, setNeurons] = useState<SimNeuron[]>(() => createNeurons(MAX_NEURONS, CANVAS_SIZE, 2026));
-  const [nNeurons, setNNeurons] = useState(3);
-  const [slot, setSlot] = useState(0);
+  const [activeNeuronIndex, setActiveNeuronIndex] = useState(0);
   const [rfScalePct, setRfScalePct] = useState(100);
   const [maskRf, setMaskRf] = useState(false);
   const [grayRf, setGrayRf] = useState(false);
@@ -161,6 +163,7 @@ export default function App() {
   const [fps, setFps] = useState(30);
   const [spikeBuffer, setSpikeBuffer] = useState(10);
   const [spikeShapeYAbs, setSpikeShapeYAbs] = useState(1.6);
+  const [audioEnabled, setAudioEnabled] = useState(false);
   const [paused, setPaused] = useState(false);
 
   const [tNow, setTNow] = useState(0);
@@ -169,25 +172,35 @@ export default function App() {
   const [kernelRgba, setKernelRgba] = useState<Uint8ClampedArray>(() => new Uint8ClampedArray(KERNEL_VIEW_SIZE * KERNEL_VIEW_SIZE * 4));
   const [drawBoxes, setDrawBoxes] = useState<DrawBox[]>([]);
 
-  const activeNeurons = useMemo(() => neurons.slice(0, nNeurons), [neurons, nNeurons]);
-  const activeSlot = Math.min(slot, Math.max(0, nNeurons - 1));
-  const editNeuron = activeNeurons[activeSlot] ?? activeNeurons[0];
+  const activeNeurons = useMemo(() => [neurons[activeNeuronIndex]], [neurons, activeNeuronIndex]);
+  const editNeuron = activeNeurons[0];
   const editNeuronScaledSize = Math.max(
     5,
     Math.round(((editNeuron?.baseRfSize ?? neurons[0].baseRfSize) * rfScalePct) / 100),
   );
   const editMax = Math.max(0, CANVAS_SIZE - editNeuronScaledSize);
   const meanRate = useMemo(() => {
-    const arr = hist.lastRate.slice(0, nNeurons);
-    if (arr.length === 0) return 0;
-    return arr.reduce((a, b) => a + b, 0) / arr.length;
-  }, [hist.lastRate, nNeurons]);
+    return Number(hist.lastRate[0] ?? 0);
+  }, [hist.lastRate]);
+  const observedRateMax = useMemo(() => {
+    if (hist.rates[0].length === 0) return 1;
+    return Math.max(1, ...hist.rates[0]);
+  }, [hist.rates]);
+  const ratePlotYMax = Math.max(1, Math.min(rateYMax, Math.max(5, observedRateMax * 1.25)));
 
-  useEffect(() => {
-    if (slot >= nNeurons) {
-      setSlot(Math.max(0, nNeurons - 1));
+  function stopAudio(): void {
+    try {
+      humOscRef.current?.stop();
+    } catch {
+      // no-op
     }
-  }, [slot, nNeurons]);
+    humOscRef.current = null;
+    humGainRef.current = null;
+    if (audioCtxRef.current) {
+      void audioCtxRef.current.close();
+    }
+    audioCtxRef.current = null;
+  }
 
   useEffect(() => {
     setNeurons((prev) =>
@@ -203,6 +216,30 @@ export default function App() {
       }),
     );
   }, [rfScalePct]);
+
+  useEffect(() => {
+    if (!audioEnabled) {
+      stopAudio();
+      return;
+    }
+
+    if (!audioCtxRef.current) {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 120;
+      gain.gain.value = 0.0001;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      audioCtxRef.current = ctx;
+      humOscRef.current = osc;
+      humGainRef.current = gain;
+    }
+
+    return () => stopAudio();
+  }, [audioEnabled]);
 
   function computeFrameAndResponse(tSec: number, sampleSpikes: boolean): {
     frame: Uint8ClampedArray;
@@ -265,37 +302,34 @@ export default function App() {
     const draw: DrawBox[] = [];
     let firstKernelPreview = kernelRgba;
 
-    for (let i = 0; i < nNeurons; i += 1) {
-      const n = neurons[i];
-      const kernel = buildActiveKernel(n.kernelBase, {
-        scalePct: rfScalePct,
-        useMask: maskRf,
-        useGray: grayRf,
-        grayMatchEnergy: grayEnergy,
-      });
-      const s = kernel.width;
-      const x = clamp(n.rfPos.x, 0, Math.max(0, CANVAS_SIZE - s));
-      const y = clamp(n.rfPos.y, 0, Math.max(0, CANVAS_SIZE - s));
-      draw.push({ x, y, size: s, colorHex: NEURON_COLOR_HEX[n.color] });
+    const n = neurons[activeNeuronIndex];
+    const kernel = buildActiveKernel(n.kernelBase, {
+      scalePct: rfScalePct,
+      useMask: maskRf,
+      useGray: grayRf,
+      grayMatchEnergy: grayEnergy,
+    });
+    const s = kernel.width;
+    const x = clamp(n.rfPos.x, 0, Math.max(0, CANVAS_SIZE - s));
+    const y = clamp(n.rfPos.y, 0, Math.max(0, CANVAS_SIZE - s));
+    draw.push({ x, y, size: s, colorHex: NEURON_COLOR_HEX[n.color] });
 
-      const out = responseFromFrame(frameM11, kernel, { x, y }, responseMode, rateGain, baselineHz, maxRateHz);
-      raw[i] = out.raw;
-      effective[i] = out.effective;
-      rates[i] = out.rateHz;
-      if (i === 0) {
-        firstKernelPreview = centeredKernelPreviewRgba(kernel, KERNEL_VIEW_SIZE, 5);
-      }
-      if (sampleSpikes) {
-        const spike = poissonSpikeStep(out.rateHz, 1.0 / Math.max(1, fps), rngRef.current);
-        spikes[i] = spike;
-        if (spike === 1) {
-          const base = generateSpikeWaveformFromRf(kernel, 1.5, 20000);
-          const sample = sampleNoisyJitteredSpikeWaveform(base, rngRef.current, 0.04, 0.035, 0.08);
-          waves[i] = {
-            tMs: Array.from(sample.tMs),
-            amp: Array.from(sample.amp),
-          };
-        }
+    const out = responseFromFrame(frameM11, kernel, { x, y }, responseMode, rateGain, baselineHz, maxRateHz);
+    raw[0] = out.raw;
+    effective[0] = out.effective;
+    rates[0] = out.rateHz;
+    firstKernelPreview = centeredKernelPreviewRgba(kernel, KERNEL_VIEW_SIZE, 5);
+
+    if (sampleSpikes) {
+      const spike = poissonSpikeStep(out.rateHz, 1.0 / Math.max(1, fps), rngRef.current);
+      spikes[0] = spike;
+      if (spike === 1) {
+        const base = generateSpikeWaveformFromRf(kernel, 1.5, 20000);
+        const sample = sampleNoisyJitteredSpikeWaveform(base, rngRef.current, 0.04, 0.035, 0.08);
+        waves[0] = {
+          tMs: Array.from(sample.tMs),
+          amp: Array.from(sample.amp),
+        };
       }
     }
 
@@ -325,7 +359,7 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     neurons,
-    nNeurons,
+    activeNeuronIndex,
     rfScalePct,
     maskRf,
     grayRf,
@@ -359,6 +393,7 @@ export default function App() {
     rateGain,
     baselineHz,
     fps,
+    rateYMax,
   ]);
 
   useEffect(() => {
@@ -381,7 +416,7 @@ export default function App() {
         const waves = prev.waves.map((arr) => [...arr]);
 
         for (let i = 0; i < MAX_NEURONS; i += 1) {
-          const isActive = i < nNeurons;
+          const isActive = i === 0;
           const rate = isActive ? step.rates[i] : 0;
           rates[i].push(rate);
           if (isActive && step.spikes[i] === 1) {
@@ -416,6 +451,31 @@ export default function App() {
           lastEff: step.effective.slice(),
         };
       });
+
+      if (audioEnabled && audioCtxRef.current && humOscRef.current && humGainRef.current) {
+        const ctx = audioCtxRef.current;
+        if (ctx.state === "suspended") {
+          void ctx.resume();
+        }
+        const tAudio = ctx.currentTime;
+        const r = Number(step.rates[0] ?? 0);
+        humOscRef.current.frequency.setTargetAtTime(100 + r * 3.5, tAudio, 0.05);
+        humGainRef.current.gain.setTargetAtTime(0.0001 + Math.min(0.02, r / 4000), tAudio, 0.08);
+        if (step.spikes[0] === 1) {
+          const clickOsc = ctx.createOscillator();
+          const clickGain = ctx.createGain();
+          clickOsc.type = "triangle";
+          clickOsc.frequency.setValueAtTime(1100, tAudio);
+          clickOsc.frequency.exponentialRampToValueAtTime(650, tAudio + 0.015);
+          clickGain.gain.setValueAtTime(0.0001, tAudio);
+          clickGain.gain.exponentialRampToValueAtTime(0.018, tAudio + 0.002);
+          clickGain.gain.exponentialRampToValueAtTime(0.0001, tAudio + 0.02);
+          clickOsc.connect(clickGain);
+          clickGain.connect(ctx.destination);
+          clickOsc.start(tAudio);
+          clickOsc.stop(tAudio + 0.03);
+        }
+      }
     }, Math.round(1000.0 * dtSec));
     return () => window.clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -423,7 +483,7 @@ export default function App() {
     paused,
     fps,
     neurons,
-    nNeurons,
+    activeNeuronIndex,
     rfScalePct,
     maskRf,
     grayRf,
@@ -457,6 +517,7 @@ export default function App() {
     rateGain,
     baselineHz,
     spikeBuffer,
+    audioEnabled,
   ]);
 
   useEffect(() => {
@@ -495,13 +556,9 @@ export default function App() {
         <section className="card">
           <h2>Neuron + RF</h2>
           <label>
-            Sim neurons (1-5): {nNeurons}
-            <input type="range" min={1} max={5} value={nNeurons} onChange={(e) => setNNeurons(Number(e.target.value))} />
-          </label>
-          <label>
-            Edit slot
-            <select value={activeSlot} onChange={(e) => setSlot(Number(e.target.value))}>
-              {Array.from({ length: nNeurons }).map((_, i) => (
+            Neuron ID
+            <select value={activeNeuronIndex} onChange={(e) => setActiveNeuronIndex(Number(e.target.value))}>
+              {Array.from({ length: MAX_NEURONS }).map((_, i) => (
                 <option key={i} value={i}>
                   N{i + 1}
                 </option>
@@ -517,7 +574,9 @@ export default function App() {
               value={clamp(editNeuron?.rfPos.x ?? 0, 0, editMax)}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                setNeurons((prev) => prev.map((n, i) => (i === activeSlot ? { ...n, rfPos: { ...n.rfPos, x: v } } : n)));
+                setNeurons((prev) =>
+                  prev.map((n, i) => (i === activeNeuronIndex ? { ...n, rfPos: { ...n.rfPos, x: v } } : n)),
+                );
               }}
             />
           </label>
@@ -530,7 +589,9 @@ export default function App() {
               value={clamp(editNeuron?.rfPos.y ?? 0, 0, editMax)}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                setNeurons((prev) => prev.map((n, i) => (i === activeSlot ? { ...n, rfPos: { ...n.rfPos, y: v } } : n)));
+                setNeurons((prev) =>
+                  prev.map((n, i) => (i === activeNeuronIndex ? { ...n, rfPos: { ...n.rfPos, y: v } } : n)),
+                );
               }}
             />
           </label>
@@ -753,6 +814,10 @@ export default function App() {
               onChange={(e) => setSpikeShapeYAbs(Number(e.target.value))}
             />
           </label>
+          <label className="row-check">
+            <input type="checkbox" checked={audioEnabled} onChange={(e) => setAudioEnabled(e.target.checked)} />
+            Tiny sounds
+          </label>
           <div className="row-actions">
             <button type="button" onClick={() => setPaused((p) => !p)}>
               {paused ? "Start" : "Pause"}
@@ -807,6 +872,7 @@ export default function App() {
             <h2>Detected Spike Shape Buffer</h2>
             <svg viewBox="0 0 1000 240" className="plot">
               <rect x={0} y={0} width={1000} height={240} fill="#000" />
+              <line x1={0} y1={120} x2={1000} y2={120} stroke="#6f6f6f" strokeWidth={1} opacity={0.9} />
               {activeNeurons.map((n, i) =>
                 hist.waves[i].map((w, j) => (
                   <polyline
@@ -824,13 +890,13 @@ export default function App() {
         </section>
 
         <section className="panel">
-          <h2>Firing Rate (0..{rateYMax} Hz)</h2>
+          <h2>Firing Rate (0..{ratePlotYMax.toFixed(1)} Hz)</h2>
           <svg viewBox="0 0 1000 220" className="plot">
             <rect x={0} y={0} width={1000} height={220} fill="#000" />
             {activeNeurons.map((n, i) => (
               <polyline
                 key={n.id}
-                points={polylinePoints(hist.t, hist.rates[i], 1000, 220, rateYMax)}
+                points={polylinePoints(hist.t, hist.rates[i], 1000, 220, ratePlotYMax)}
                 fill="none"
                 stroke={NEURON_COLOR_HEX[n.color]}
                 strokeWidth={2}
