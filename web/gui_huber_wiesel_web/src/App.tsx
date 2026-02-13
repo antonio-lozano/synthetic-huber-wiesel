@@ -15,7 +15,7 @@ import {
   timedCycle,
   generateSpikeWaveformFromRf,
 } from "./core/sim";
-import { GratingAutoMode, ResponseMode, SimNeuron, StimulusColor, StimulusKind } from "./core/types";
+import { GratingAutoMode, ResponseMode, RgbTensor, SimNeuron, StimulusColor, StimulusKind } from "./core/types";
 
 const CANVAS_SIZE = 512;
 const KERNEL_VIEW_SIZE = 512;
@@ -49,6 +49,13 @@ type PlotMargins = {
   right: number;
   top: number;
   bottom: number;
+};
+
+type CifarSpriteMeta = {
+  tile_size: number;
+  cols: number;
+  rows: number;
+  count: number;
 };
 
 function clamp(v: number, lo: number, hi: number): number {
@@ -131,6 +138,62 @@ function waveformPolyline(
     .join(" ");
 }
 
+async function loadCifarDatasetFromSprite(baseUrl: string): Promise<RgbTensor[]> {
+  const metaPath = `${baseUrl}assets/cifar50.json`;
+  const pngPath = `${baseUrl}assets/cifar50.png`;
+
+  const metaResp = await fetch(metaPath, { cache: "force-cache" });
+  if (!metaResp.ok) {
+    throw new Error(`Failed to load CIFAR metadata: ${metaResp.status}`);
+  }
+  const meta = (await metaResp.json()) as CifarSpriteMeta;
+
+  const image = new Image();
+  image.decoding = "async";
+  const imageLoaded = new Promise<void>((resolve, reject) => {
+    image.onload = () => resolve();
+    image.onerror = () => reject(new Error("Failed to load CIFAR sprite image"));
+  });
+  image.src = pngPath;
+  await imageLoaded;
+
+  const spriteCanvas = document.createElement("canvas");
+  spriteCanvas.width = image.width;
+  spriteCanvas.height = image.height;
+  const ctx = spriteCanvas.getContext("2d");
+  if (!ctx) throw new Error("Could not allocate canvas context for CIFAR sprite decoding");
+  ctx.drawImage(image, 0, 0);
+  const spriteRgba = ctx.getImageData(0, 0, spriteCanvas.width, spriteCanvas.height).data;
+
+  const tile = Math.max(1, Math.round(meta.tile_size));
+  const cols = Math.max(1, Math.round(meta.cols));
+  const rows = Math.max(1, Math.round(meta.rows));
+  const count = Math.max(1, Math.min(Math.round(meta.count), cols * rows));
+  const out: RgbTensor[] = [];
+
+  for (let idx = 0; idx < count; idx += 1) {
+    const row = Math.floor(idx / cols);
+    const col = idx % cols;
+    if (row >= rows) break;
+
+    const data = new Float32Array(tile * tile * 3);
+    let dst = 0;
+    for (let y = 0; y < tile; y += 1) {
+      const sy = row * tile + y;
+      for (let x = 0; x < tile; x += 1) {
+        const sx = col * tile + x;
+        const src = (sy * spriteCanvas.width + sx) * 4;
+        data[dst] = (spriteRgba[src] / 255.0) * 2.0 - 1.0;
+        data[dst + 1] = (spriteRgba[src + 1] / 255.0) * 2.0 - 1.0;
+        data[dst + 2] = (spriteRgba[src + 2] / 255.0) * 2.0 - 1.0;
+        dst += 3;
+      }
+    }
+    out.push({ width: tile, height: tile, data });
+  }
+  return out;
+}
+
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const kernelCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -141,7 +204,8 @@ export default function App() {
   const humOscRef = useRef<OscillatorNode | null>(null);
   const humGainRef = useRef<GainNode | null>(null);
 
-  const cifarDataset = useMemo(() => generatePseudoCifarDataset(300), []);
+  const [cifarDataset, setCifarDataset] = useState<RgbTensor[]>(() => generatePseudoCifarDataset(50));
+  const [cifarSource, setCifarSource] = useState<"real" | "pseudo">("pseudo");
 
   const [neurons, setNeurons] = useState<SimNeuron[]>(() => createNeurons(MAX_NEURONS, CANVAS_SIZE, 2026));
   const [activeNeuronIndex, setActiveNeuronIndex] = useState(0);
@@ -182,9 +246,10 @@ export default function App() {
   const [baselineHz, setBaselineHz] = useState(0);
   const [rateYMax, setRateYMax] = useState(120);
   const [fps, setFps] = useState(30);
-  const [spikeBuffer, setSpikeBuffer] = useState(10);
+  const [spikeBuffer, setSpikeBuffer] = useState(3);
+  const [bufferRefreshSec, setBufferRefreshSec] = useState(5);
   const [spikeShapeYAbs, setSpikeShapeYAbs] = useState(0.9);
-  const [audioEnabled, setAudioEnabled] = useState(false);
+  const [audioEnabled, setAudioEnabled] = useState(true);
   const [paused, setPaused] = useState(false);
 
   const [tNow, setTNow] = useState(0);
@@ -215,6 +280,29 @@ export default function App() {
   const rateInnerH = rateSvgH - rateMargins.top - rateMargins.bottom;
   const traceTStart = hist.t.length > 0 ? hist.t[0] : Math.max(0, tNow - HISTORY_SEC);
   const traceTEnd = hist.t.length > 1 ? hist.t[hist.t.length - 1] : traceTStart + 1.0 / Math.max(1, fps);
+
+  useEffect(() => {
+    let cancelled = false;
+    const baseUrl = import.meta.env.BASE_URL ?? "/";
+    void (async () => {
+      try {
+        const dataset = await loadCifarDatasetFromSprite(baseUrl);
+        if (!cancelled && dataset.length > 0) {
+          setCifarDataset(dataset);
+          setCifarSource("real");
+          setCifarIndex((prev) => clamp(prev, 0, dataset.length - 1));
+        }
+      } catch (err) {
+        console.warn("Falling back to synthetic CIFAR-like set:", err);
+        if (!cancelled) {
+          setCifarSource("pseudo");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function stopAudio(): void {
     try {
@@ -268,6 +356,17 @@ export default function App() {
 
     return () => stopAudio();
   }, [audioEnabled]);
+
+  useEffect(() => {
+    const refreshMs = Math.max(250, Math.round(bufferRefreshSec * 1000));
+    const id = window.setInterval(() => {
+      setHist((prev) => ({
+        ...prev,
+        waves: prev.waves.map(() => []),
+      }));
+    }, refreshMs);
+    return () => window.clearInterval(id);
+  }, [bufferRefreshSec]);
 
   function computeFrameAndResponse(tSec: number, sampleSpikes: boolean): {
     frame: Uint8ClampedArray;
@@ -648,7 +747,7 @@ export default function App() {
             <select value={stimKind} onChange={(e) => setStimKind(e.target.value as StimulusKind)}>
               <option value="bar">bar</option>
               <option value="grating">grating</option>
-              <option value="cifar">cifar-like</option>
+              <option value="cifar">cifar-10 preload</option>
             </select>
           </label>
           <label>
@@ -740,7 +839,7 @@ export default function App() {
           </label>
 
           <label>
-            Cifar-like index: {cifarIndex}
+            CIFAR index: {cifarIndex}
             <input
               type="range"
               min={0}
@@ -750,9 +849,10 @@ export default function App() {
             />
           </label>
           <label>
-            Cifar-like size: {cifarSizePx}
+            CIFAR size: {cifarSizePx}
             <input type="range" min={32} max={260} value={cifarSizePx} onChange={(e) => setCifarSizePx(Number(e.target.value))} />
           </label>
+          <div className="readout">Dataset source: {cifarSource === "real" ? "real CIFAR-10 (50 preload)" : "synthetic fallback"}</div>
         </section>
 
         <section className="card">
@@ -830,6 +930,17 @@ export default function App() {
           <label>
             Spike buffer: {spikeBuffer}
             <input type="range" min={1} max={120} value={spikeBuffer} onChange={(e) => setSpikeBuffer(Number(e.target.value))} />
+          </label>
+          <label>
+            Buffer refresh (s): {bufferRefreshSec.toFixed(1)}
+            <input
+              type="range"
+              min={1}
+              max={30}
+              step={0.5}
+              value={bufferRefreshSec}
+              onChange={(e) => setBufferRefreshSec(Number(e.target.value))}
+            />
           </label>
           <label>
             Spike shape Y +/-: {spikeShapeYAbs.toFixed(1)}
