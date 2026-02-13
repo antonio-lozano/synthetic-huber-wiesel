@@ -497,18 +497,7 @@ export function generateCifarPatchStimulus(
 ): RgbTensor {
   const idx = clamp(Math.round(imageIndex), 0, dataset.length - 1);
   const src = dataset[idx];
-  const resized = resizeKernelRgb(src, size);
-  // Keep vertical orientation aligned with desktop GUI display.
-  const out = createRgbTensor(size, size, 0);
-  for (let y = 0; y < size; y += 1) {
-    for (let x = 0; x < size; x += 1) {
-      const yy = size - 1 - y;
-      for (let c = 0; c < 3; c += 1) {
-        out.data[rgbIndex(size, x, y, c)] = resized.data[rgbIndex(size, x, yy, c)];
-      }
-    }
-  }
-  return out;
+  return resizeKernelRgb(src, size);
 }
 
 export function placePatchOnCanvas(
