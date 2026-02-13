@@ -138,9 +138,9 @@ function waveformPolyline(
     .join(" ");
 }
 
-async function loadCifarDatasetFromSprite(baseUrl: string): Promise<RgbTensor[]> {
-  const metaPath = `${baseUrl}assets/cifar50.json`;
-  const pngPath = `${baseUrl}assets/cifar50.png`;
+async function loadCifarDatasetFromSprite(): Promise<RgbTensor[]> {
+  const metaPath = "assets/cifar50.json";
+  const pngPath = "assets/cifar50.png";
 
   const metaResp = await fetch(metaPath, { cache: "force-cache" });
   if (!metaResp.ok) {
@@ -283,10 +283,9 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false;
-    const baseUrl = import.meta.env.BASE_URL ?? "/";
     void (async () => {
       try {
-        const dataset = await loadCifarDatasetFromSprite(baseUrl);
+        const dataset = await loadCifarDatasetFromSprite();
         if (!cancelled && dataset.length > 0) {
           setCifarDataset(dataset);
           setCifarSource("real");
