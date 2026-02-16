@@ -313,6 +313,171 @@ text.axis-tick {
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
+/* ── Neuron toggles ── */
+.neuron-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 4px 0;
+}
+
+.neuron-toggle {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* ── Preset panel ── */
+.preset-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.preset-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.preset-btn {
+  flex: 1;
+  text-align: left;
+  border: 1px solid var(--border-1);
+  background: color-mix(in oklab, var(--bg-0) 85%, var(--bg-2));
+  color: var(--fg-0);
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 14px;
+  border-radius: 6px;
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.preset-btn:hover,
+.preset-btn:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 35%, transparent);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.preset-delete {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border-1);
+  background: transparent;
+  color: #ff5555;
+  font-size: 16px;
+  font-weight: 700;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.preset-delete:hover {
+  border-color: #ff5555;
+  background: rgba(255, 85, 85, 0.15);
+}
+
+.preset-save-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.preset-save-row input[type="text"] {
+  flex: 1;
+  min-height: 34px;
+  border: 1px solid var(--border-1);
+  background: color-mix(in oklab, var(--bg-0) 86%, var(--bg-2));
+  color: var(--fg-0);
+  padding: 0 8px;
+  font-size: 14px;
+  border-radius: 6px;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.preset-save-row input[type="text"]:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 35%, transparent);
+}
+
+.preset-save-row button {
+  border: 1px solid var(--border-1);
+  background: color-mix(in oklab, var(--bg-0) 85%, var(--bg-2));
+  color: var(--fg-0);
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 14px;
+  border-radius: 6px;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.preset-save-row button:hover:not(:disabled),
+.preset-save-row button:focus-visible:not(:disabled) {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 35%, transparent);
+}
+
+.preset-save-row button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Perf HUD ── */
+.perf-hud {
+  display: flex;
+  gap: 16px;
+  padding: 4px 12px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+  color: var(--fg-1);
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid var(--border-0);
+  border-radius: 6px;
+  user-select: none;
+  pointer-events: none;
+  align-self: flex-end;
+  width: fit-content;
+}
+
+/* ── Keyboard shortcut hint styling ── */
+kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+  color: var(--fg-0);
+  background: var(--bg-2);
+  border: 1px solid var(--border-1);
+  border-radius: 4px;
+  line-height: 1.4;
+}
+
+/* ── Focus visible states for accessibility ── */
+*:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+input[type="range"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── Media queries ── */
 @media (max-width: 1600px) {
   .top-row {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -339,6 +504,10 @@ text.axis-tick {
 
   .top-row {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "stim"
+      "kernel"
+      "wave";
   }
 
   :root {
@@ -348,5 +517,47 @@ text.axis-tick {
     --type-mono: 15px;
     --type-axis-label: 14px;
     --type-axis-tick: 13px;
+  }
+
+  .perf-hud {
+    font-size: 11px;
+    gap: 10px;
+    padding: 3px 8px;
+  }
+}
+
+@media (max-width: 640px) {
+  .app {
+    padding: var(--space-1);
+    gap: var(--space-1);
+  }
+
+  :root {
+    --type-display: 22px;
+    --type-title: 17px;
+    --type-label: 15px;
+    --type-mono: 13px;
+    --type-axis-label: 12px;
+    --type-axis-tick: 11px;
+  }
+
+  .card,
+  .panel {
+    padding: var(--panel-pad-sm);
+  }
+
+  .plot {
+    height: 140px;
+  }
+}
+
+/* ── Reduced motion preference ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
