@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/core/cifarsprite.ts","./src/core/colors.ts","./src/core/history.ts","./src/core/neuronselection.ts","./src/core/sim.test.ts","./src/core/sim.ts","./src/core/types.ts","./src/ui/rateplotpanel.tsx","./src/ui/spikeplotpanel.tsx","./src/ui/waveformpanel.tsx","./src/ui/plotutils.ts"],"version":"5.9.3"}

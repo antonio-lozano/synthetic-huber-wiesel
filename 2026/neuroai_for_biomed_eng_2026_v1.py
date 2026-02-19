@@ -830,3 +830,5 @@ print("2) Change cfg.sizes and cfg.frequency_range to probe RF recovery behavior
 print("3) Increase cfg.n_v1_cells and inspect population diversity")
 print("4) Enable MLP and compare 3-way orientation/frequency errors")
 print("5) Modify synthetic bar length/thickness/speed and inspect response changes")
+
+# %%
