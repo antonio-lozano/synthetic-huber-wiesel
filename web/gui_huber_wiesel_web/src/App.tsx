@@ -19,6 +19,8 @@ import { useKeyboardShortcuts } from "./ui/useKeyboardShortcuts";
 import { clamp, PlotMargins } from "./ui/plotUtils";
 
 export default function App() {
+  const originalRepoUrl = "https://github.com/antonio-lozano/synthetic-huber-wiesel";
+
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const kernelCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -94,6 +96,30 @@ export default function App() {
           Real RF convolution, bounded rates, Poisson spikes, waveform buffer.
           <br />
           <kbd>Space</kbd>=pause <kbd>R</kbd>=reset <kbd>N/P</kbd>=neuron <kbd>1-3</kbd>=stim <kbd>T</kbd>=timed
+        </p>
+        <p className="attribution">
+          <a
+            className="attribution-link"
+            href="https://antonio-lozano.github.io/neurolight.github.io/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Antonio Lozano
+          </a>
+          {" · "}Eduardo Fernandez&apos;s lab{" · "}NBIO, UMH{" · "}
+          <a className="attribution-link" href="mailto:a.lozano@umh.es">
+            a.lozano@umh.es
+          </a>
+        </p>
+        <p className="attribution">
+          <a
+            className="attribution-link"
+            href={originalRepoUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Original repo
+          </a>
         </p>
 
         <PresetPanel />

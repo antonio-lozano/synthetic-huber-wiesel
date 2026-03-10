@@ -119,6 +119,25 @@ h2 {
   font-size: var(--type-mono);
 }
 
+.attribution {
+  margin: 0;
+  color: var(--fg-0);
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.attribution-link {
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.attribution-link:hover,
+.attribution-link:focus-visible {
+  color: #fff;
+  text-decoration: underline;
+}
+
 .card,
 .panel {
   background: linear-gradient(180deg, var(--bg-2) 0%, var(--bg-1) 100%);
