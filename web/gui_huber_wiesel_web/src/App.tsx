@@ -90,13 +90,7 @@ export default function App() {
 
   return (
     <div className="app" role="application" aria-label="Synthetic Hubel-Wiesel Simulation">
-      <aside className="left" role="complementary" aria-label="Controls">
-        <h1>Synthetic Hubel-Wiesel Web</h1>
-        <p className="muted">
-          Real RF convolution, bounded rates, Poisson spikes, waveform buffer.
-          <br />
-          <kbd>Space</kbd>=pause <kbd>R</kbd>=reset <kbd>N/P</kbd>=neuron <kbd>1-3</kbd>=stim <kbd>T</kbd>=timed
-        </p>
+      <header className="top-banner" aria-label="Author information">
         <p className="attribution">
           <a
             className="attribution-link"
@@ -110,8 +104,7 @@ export default function App() {
           <a className="attribution-link" href="mailto:a.lozano@umh.es">
             a.lozano@umh.es
           </a>
-        </p>
-        <p className="attribution">
+          {" · "}
           <a
             className="attribution-link"
             href={originalRepoUrl}
@@ -121,77 +114,88 @@ export default function App() {
             Original repo
           </a>
         </p>
+      </header>
 
-        <PresetPanel />
-        <NeuronPanel />
-        <StimulusPanel />
-        <TimedExperimentPanel />
-        <DynamicsPanel />
-      </aside>
+      <div className="app-grid">
+        <aside className="left" role="complementary" aria-label="Controls">
+          <h1>Synthetic Hubel-Wiesel Web</h1>
+          <p className="muted">
+            Real RF convolution, bounded rates, Poisson spikes, waveform buffer.
+            <br />
+            <kbd>Space</kbd>=pause <kbd>R</kbd>=reset <kbd>N/P</kbd>=neuron <kbd>1-3</kbd>=stim <kbd>T</kbd>=timed
+          </p>
 
-      <main className="right" role="main" aria-label="Visualization">
-        <PerfHUD />
+          <PresetPanel />
+          <NeuronPanel />
+          <StimulusPanel />
+          <TimedExperimentPanel />
+          <DynamicsPanel />
+        </aside>
 
-        <section className="top-row">
-          <section className="panel panel-stimulus">
-            <h2>Stimulus + RF</h2>
-            <div className="panel-body">
-              <canvas
-                ref={canvasRef}
-                width={CANVAS_SIZE}
-                height={CANVAS_SIZE}
-                className="media-canvas"
-                role="img"
-                aria-label="Stimulus canvas with RF overlay"
-                tabIndex={0}
-                onMouseMove={(e) => {
-                  if (e.buttons !== 1) return;
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  s.set({
-                    centerX: clamp(e.clientX - rect.left, 0, CANVAS_SIZE),
-                    centerY: clamp(e.clientY - rect.top, 0, CANVAS_SIZE),
-                  });
-                }}
-              />
-            </div>
+        <main className="right" role="main" aria-label="Visualization">
+          <PerfHUD />
+
+          <section className="top-row">
+            <section className="panel panel-stimulus">
+              <h2>Stimulus + RF</h2>
+              <div className="panel-body">
+                <canvas
+                  ref={canvasRef}
+                  width={CANVAS_SIZE}
+                  height={CANVAS_SIZE}
+                  className="media-canvas"
+                  role="img"
+                  aria-label="Stimulus canvas with RF overlay"
+                  tabIndex={0}
+                  onMouseMove={(e) => {
+                    if (e.buttons !== 1) return;
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    s.set({
+                      centerX: clamp(e.clientX - rect.left, 0, CANVAS_SIZE),
+                      centerY: clamp(e.clientY - rect.top, 0, CANVAS_SIZE),
+                    });
+                  }}
+                />
+              </div>
+            </section>
+
+            <section className="panel panel-kernel">
+              <h2>Selected V1 Kernel</h2>
+              <div className="panel-body">
+                <canvas
+                  ref={kernelCanvasRef}
+                  width={KERNEL_VIEW_SIZE}
+                  height={KERNEL_VIEW_SIZE}
+                  className="media-canvas kernel-canvas"
+                  role="img"
+                  aria-label="Selected neuron kernel preview"
+                />
+              </div>
+            </section>
+
+            <WaveformPanel activeNeurons={activeNeurons} wavesByNeuron={hist.waves} spikeShapeYAbs={s.spikeShapeYAbs} />
           </section>
 
-          <section className="panel panel-kernel">
-            <h2>Selected V1 Kernel</h2>
-            <div className="panel-body">
-              <canvas
-                ref={kernelCanvasRef}
-                width={KERNEL_VIEW_SIZE}
-                height={KERNEL_VIEW_SIZE}
-                className="media-canvas kernel-canvas"
-                role="img"
-                aria-label="Selected neuron kernel preview"
-              />
-            </div>
-          </section>
-
-          <WaveformPanel activeNeurons={activeNeurons} wavesByNeuron={hist.waves} spikeShapeYAbs={s.spikeShapeYAbs} />
-        </section>
-
-        <RatePlotPanel
-          activeNeurons={activeNeurons}
-          traceTime={hist.t}
-          ratesByNeuron={hist.rates}
-          ratePlotYMax={ratePlotYMax}
-          historySec={HISTORY_SEC}
-          traceTStart={traceTStart}
-          traceTEnd={traceTEnd}
-          margins={rateMargins}
-        />
-        <SpikePlotPanel
-          activeNeurons={activeNeurons}
-          spikesByNeuron={hist.spikes}
-          historySec={HISTORY_SEC}
-          traceTStart={traceTStart}
-          traceTEnd={traceTEnd}
-          margins={rateMargins}
-        />
-      </main>
+          <RatePlotPanel
+            activeNeurons={activeNeurons}
+            traceTime={hist.t}
+            ratesByNeuron={hist.rates}
+            ratePlotYMax={ratePlotYMax}
+            historySec={HISTORY_SEC}
+            traceTStart={traceTStart}
+            traceTEnd={traceTEnd}
+            margins={rateMargins}
+          />
+          <SpikePlotPanel
+            activeNeurons={activeNeurons}
+            spikesByNeuron={hist.spikes}
+            historySec={HISTORY_SEC}
+            traceTStart={traceTStart}
+            traceTEnd={traceTEnd}
+            margins={rateMargins}
+          />
+        </main>
+      </div>
     </div>
   );
 }

@@ -47,8 +47,8 @@ body,
 }
 
 .app {
-  display: grid;
-  grid-template-columns: minmax(440px, 500px) 1fr;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-2);
   width: 100%;
   height: 100vh;
@@ -57,11 +57,33 @@ body,
   overflow: hidden;
 }
 
+.app-grid {
+  display: grid;
+  grid-template-columns: minmax(440px, 500px) 1fr;
+  gap: var(--space-2);
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.top-banner {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1px solid var(--border-0);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(18, 18, 18, 0.95) 0%, rgba(10, 10, 10, 0.92) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 8px 28px rgba(0, 0, 0, 0.2);
+}
+
 .left {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  max-height: calc(100vh - 32px);
+  min-height: 0;
   overflow-y: auto;
   padding-right: var(--space-1);
 }
@@ -70,6 +92,7 @@ body,
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+  min-height: 0;
   overflow-y: auto;
   padding-right: var(--space-1);
 }
@@ -508,15 +531,18 @@ select:focus-visible {
 
 @media (max-width: 1080px) {
   .app {
-    grid-template-columns: 1fr;
     height: auto;
     min-height: 100vh;
     overflow: visible;
   }
 
+  .app-grid {
+    grid-template-columns: 1fr;
+    overflow: visible;
+  }
+
   .left,
   .right {
-    max-height: none;
     overflow: visible;
     padding-right: 0;
   }
@@ -551,6 +577,10 @@ select:focus-visible {
     gap: var(--space-1);
   }
 
+  .top-banner {
+    padding: 8px 10px;
+  }
+
   :root {
     --type-display: 22px;
     --type-title: 17px;
@@ -563,6 +593,10 @@ select:focus-visible {
   .card,
   .panel {
     padding: var(--panel-pad-sm);
+  }
+
+  .attribution {
+    font-size: 13px;
   }
 
   .plot {
